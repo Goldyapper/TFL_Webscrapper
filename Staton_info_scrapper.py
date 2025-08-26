@@ -27,10 +27,23 @@ def get_station_info(station_id="940GZZLUACT"):
         # Extract lines
         lines = [line["name"] for line in data.get("lines", [])]
 
+        # Zone information
+        zones = ""
+        # Option 1: TfL often has "zones" list directly
+        if "zones" in data:
+            zones = data["zones"]
+        else:
+            # Option 2: check additionalProperties
+            for prop in data.get("additionalProperties", []):
+                if prop.get("key") == "Zone":
+                    zones = [int(z.strip()) for z in prop.get("value", "").split(",")]
+                    break
+
         return {
             "station_name": station_name,
             "number_of_platforms": num_platforms,
-            "lines": lines
+            "lines": lines,
+            "zones": zones
         }
 
     except Exception as e:
