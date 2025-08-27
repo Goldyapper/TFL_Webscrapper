@@ -37,44 +37,74 @@ def find_zone(data):
                 return result
     return None
 
-def get_platform_from_wikipedia(station_name):
+def get_wikipedia_page(station_name):
     """
-    Fetch number of platforms from Wikipedia.
-    Tries multiple common page suffixes and stops at first valid station page.
+    Try common Wikipedia page suffixes and return BeautifulSoup object if found.
     """
     suffixes = ["_tube_station", "_railway_station", ""]
-    headers = {
-        "User-Agent": "TFL_WebscraperBot/1.0 (adam.a.parsons15@gmail.com)"
-    }
-    
+
     for suffix in suffixes:
         page_name = station_name.replace(" ", "_") + suffix
         page = wiki_wiki.page(page_name)
-        
+
         if page.exists():
-            #print(f"Found Wikipedia page: {page.fullurl}")
             url = page.fullurl
             try:
-                resp = requests.get(url, timeout=15, headers=headers)
+                resp = requests.get(url, timeout=15, headers={
+                    "User-Agent": "TFL_WebscraperBot/1.0 (adam.a.parsons15@gmail.com)"
+                })
                 resp.raise_for_status()
             except:
                 continue
-            
-            soup = BeautifulSoup(resp.text, "html.parser")
-            rows = soup.select(".infobox tr")
-            for row in rows:
-                header = row.find("th")
-                data = row.find("td")
-                if header and data:
-                    if "number of platforms" in header.get_text(strip=True).lower():
-                        match = re.search(r'\d+', data.get_text(strip=True))
-                        if match:
-                            return int(match.group(0))
-            # Page exists but no platform info found
-            return None
 
-    #print(f"No Wikipedia page found for {station_name}")
+            return BeautifulSoup(resp.text, "html.parser")
     return None
+
+def get_platform_from_wikipedia(station_name):
+    """
+    Extract number of platforms from a Wikipedia page.
+    """
+    soup = get_wikipedia_page(station_name)
+    if not soup:
+        return None
+
+    rows = soup.select(".infobox tr")
+    for row in rows:
+        header = row.find("th")
+        data = row.find("td")
+        if header and data:
+            if "number of platforms" in header.get_text(strip=True).lower():
+                match = re.search(r'\d+', data.get_text(strip=True))
+                if match:
+                    return int(match.group(0))
+    return None
+
+def get_zone_from_wikipedia(station_name):
+    """
+    Extract fare zone(s) from a Wikipedia page.
+    """
+    soup = get_wikipedia_page(station_name)
+    if not soup:
+        return None
+
+    rows = soup.select(".infobox tr")
+    possible_headers = ["fare zone", "zone", "travelcard zone", "london fare zone"]
+
+    for row in rows:
+        header = row.find("th")
+        data = row.find("td")
+        if header and data:
+            header_text = header.get_text(strip=True).lower()
+            if any(h in header_text for h in possible_headers):
+                zone_text = data.get_text(strip=True)
+                # Remove parentheses and extra text
+                zone_text = re.sub(r"\s*\(.*?\)", "", zone_text)
+                # Handle multi-zones like "2+3" or "5 and 6"
+                match = re.search(r'\d+', zone_text)
+                if match:
+                    return int(match.group(0))
+    return None
+
 
 def get_station_info(station_id):
     """
@@ -92,12 +122,9 @@ def get_station_info(station_id):
         # Platform counting (combo) 
         station_name = data.get("commonName", "").strip()
         # Cleaned station name
-        if "Underground Station" in station_name:
-            station_name = station_name.replace("Underground Station", "").strip()
-        if "Rail" in station_name:
-            station_name = station_name.replace("Rail", "").strip()
-        else:
-            station_name = station_name.replace("Station", "").strip()
+        station_name = data.get("commonName", "").strip()
+        station_name = station_name.replace("Underground Station", "").replace("Rail Station", "").replace("Station", "").strip()
+        station_name = re.sub(r"\s*\(.*?\)", "", station_name).strip()
         
 
         wiki_station_name = station_name.replace(" ", "_")
@@ -115,11 +142,13 @@ def get_station_info(station_id):
         })
 
         zone = find_zone(data)
-        try:
-            if zone is not None:
-                zone = int(str(zone).split("+")[0].strip())  # handle '2+3' case
-        except Exception:
-            zone = None
+        if zone is not None:
+            try:
+                zone = int(str(zone).split("+")[0].strip())
+            except Exception:
+                zone = get_zone_from_wikipedia(station_name)
+        else:
+            zone = get_zone_from_wikipedia(station_name)
 
         return {
             "station_name": station_name,
@@ -132,3 +161,4 @@ def get_station_info(station_id):
         return {"error": str(e)}
 
 #print(get_station_info("940GZZLUAGL"))
+#print(get_station_info(['910GBONDST', '940GZZLUBND']))

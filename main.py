@@ -3,30 +3,35 @@ from station_ids import station_ids
 
 def station_info_loop(station_ids):
     station_names = list(station_ids.keys())
-    i = 0
+    i = 30
 
-    while i < 20:
+    #while i < len(station_ids):
+    while i < 38:   
         station = station_names[i]
         stop_ids = station_ids[station]
+
+        seen_stations = {}        
 
         # Some stations may have multiple stop IDs
         for stop_id in stop_ids:
             info = get_station_info(stop_id)
 
             if "error" in info:
-                print("="*40)
+                print("="*10)
                 print(f"Error fetching {station} ({stop_id}): {info['error']}")
-                print("="*40)
+                print("="*10)
                 continue  # skip to next stop_id
-
-            print("="*40)
+            
+            seen_stations[info["station_name"]] = info
+        for info in seen_stations.values():
+            print("="*10)
             print(f"Station: {info['station_name']}")
-            print(f"Zone(s): {info['zones']}")
+            print(f"Zone: {info['zones']}")
             print(f"Number of platforms: {info['number_of_platforms']}")
             print(f"Lines: {', '.join(info['lines'])}")
-            print("="*40)
+            print("="*10)
 
-        i += 1
+            i += 1
 
 # Run the loop
 station_info_loop(station_ids)
