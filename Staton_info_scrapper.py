@@ -5,7 +5,7 @@ def get_station_info(station_id="940GZZLUACT"):
     Fetch station info from TfL API.
 
     Returns:
-        dict: Station name, number of platforms, platforms, lines
+        dict: Station name, number of platforms, lines, zones
     """
     try:
         url = f"https://api.tfl.gov.uk/StopPoint/{station_id}"
@@ -28,7 +28,7 @@ def get_station_info(station_id="940GZZLUACT"):
         lines = [line["name"] for line in data.get("lines", [])]
 
         # Zone information
-        zones = ""
+        zones = []
         # Option 1: TfL often has "zones" list directly
         if "zones" in data:
             zones = data["zones"]
