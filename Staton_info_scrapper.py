@@ -16,7 +16,7 @@ def get_station_info(station_id):
         # Cleaned station name
         station_name = data.get("commonName", "").replace("Underground Station", "").strip()
 
-        # --- Platform counting (combo) ---
+        # Platform counting (combo) 
         platform_ids = set()
 
         # Children
@@ -34,23 +34,24 @@ def get_station_info(station_id):
             elif isinstance(refs, str):
                 platform_ids.add(refs)
 
-        # --- Platform names from arrivals ---
-        arrivals_url = f"https://api.tfl.gov.uk/StopPoint/{station_id}/Arrivals"
+        # Platform names from arrivals 
+        platforms = set()
         try:
+            arrivals_url = f"https://api.tfl.gov.uk/StopPoint/{station_id}/Arrivals"
             arr_resp = requests.get(arrivals_url, timeout=15)
             arr_resp.raise_for_status()
             arrivals = arr_resp.json()
-            arrival_platforms = {a.get("platformName") for a in arrivals if a.get("platformName")}
+            platforms = {a.get("platformName") for a in arrivals if a.get("platformName")}
         except Exception:
-            arrival_platforms = set()
+            platforms = set()
 
         # Combine both: if metadata is weak, arrivals helps
-        num_platforms = max(len(platform_ids), len(arrival_platforms))
+        num_platforms = len(platforms)
 
         # Extract lines
-        lines = [line["name"] for line in data.get("lines", [])]
-        
+        lines = sorted({line.get("name") for line in data.get("lines", []) if line.get("name")})        
         # Zone information
+
         zone = None
         if "zones" in data and data["zones"]:
             # take the first zone
