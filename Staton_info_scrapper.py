@@ -1,4 +1,11 @@
-import requests
+import requests,wikipediaapi,re
+from bs4 import BeautifulSoup
+
+# Specify a wiki user
+wiki_wiki = wikipediaapi.Wikipedia(
+    language='en',
+    user_agent='TFL_WebscraperBot/1.0 (adam.a.parsons15@gmail.com)'
+)
 
 VALID_LINES = {
     "bakerloo", "central", "circle", "district", "hammersmith & city",
@@ -30,6 +37,45 @@ def find_zone(data):
                 return result
     return None
 
+def get_platform_from_wikipedia(station_name):
+    """
+    Fetch number of platforms from Wikipedia.
+    Tries multiple common page suffixes and stops at first valid station page.
+    """
+    suffixes = ["_tube_station", "_railway_station", ""]
+    headers = {
+        "User-Agent": "TFL_WebscraperBot/1.0 (adam.a.parsons15@gmail.com)"
+    }
+    
+    for suffix in suffixes:
+        page_name = station_name.replace(" ", "_") + suffix
+        page = wiki_wiki.page(page_name)
+        
+        if page.exists():
+            #print(f"Found Wikipedia page: {page.fullurl}")
+            url = page.fullurl
+            try:
+                resp = requests.get(url, timeout=15, headers=headers)
+                resp.raise_for_status()
+            except:
+                continue
+            
+            soup = BeautifulSoup(resp.text, "html.parser")
+            rows = soup.select(".infobox tr")
+            for row in rows:
+                header = row.find("th")
+                data = row.find("td")
+                if header and data:
+                    if "number of platforms" in header.get_text(strip=True).lower():
+                        match = re.search(r'\d+', data.get_text(strip=True))
+                        if match:
+                            return int(match.group(0))
+            # Page exists but no platform info found
+            return None
+
+    #print(f"No Wikipedia page found for {station_name}")
+    return None
+
 def get_station_info(station_id):
     """
     Fetch station info from TfL API.
@@ -43,44 +89,23 @@ def get_station_info(station_id):
         response.raise_for_status()
         data = response.json()
 
-        # Cleaned station name
+        # Platform counting (combo) 
         station_name = data.get("commonName", "").strip()
+        # Cleaned station name
         if "Underground Station" in station_name:
             station_name = station_name.replace("Underground Station", "").strip()
+        if "Rail" in station_name:
+            station_name = station_name.replace("Rail", "").strip()
         else:
             station_name = station_name.replace("Station", "").strip()
         
-        # Platform counting (combo) 
-        platform_ids = set()
 
-        # Children
-        for child in data.get("children", []):
-            if child.get("stopType") == "NaptanMetroPlatform":
-                naptan = child.get("naptanId") or child.get("id")
-                if naptan:
-                    platform_ids.add(naptan)
-
-        # lineGroup
-        for group in data.get("lineGroup", []):
-            refs = group.get("naptanIdReference", [])
-            if isinstance(refs, list):
-                platform_ids.update(refs)
-            elif isinstance(refs, str):
-                platform_ids.add(refs)
-
-        # Platform names from arrivals 
-        platforms = set()
-        try:
-            arrivals_url = f"https://api.tfl.gov.uk/StopPoint/{station_id}/Arrivals"
-            arr_resp = requests.get(arrivals_url, timeout=15)
-            arr_resp.raise_for_status()
-            arrivals = arr_resp.json()
-            platforms = {a.get("platformName") for a in arrivals if a.get("platformName")}
-        except Exception:
-            platforms = set()
-
-        # Combine both: if metadata is weak, arrivals helps
-        num_platforms = len(platforms)
+        wiki_station_name = station_name.replace(" ", "_")
+        wiki_platforms = get_platform_from_wikipedia(wiki_station_name)
+        
+        num_platforms = 0
+        if wiki_platforms:
+            num_platforms = wiki_platforms
 
         # Extract lines
         # Lines (filter only valid TfL rail lines)
@@ -106,4 +131,4 @@ def get_station_info(station_id):
     except Exception as e:
         return {"error": str(e)}
 
-print(get_station_info("940GZZLUAGL"))
+#print(get_station_info("940GZZLUAGL"))
