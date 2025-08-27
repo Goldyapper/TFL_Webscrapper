@@ -1,6 +1,6 @@
 import requests
 
-def get_station_info(station_id="940GZZLUACT"):
+def get_station_info(station_id):
     """
     Fetch station info from TfL API.
 
@@ -16,37 +16,61 @@ def get_station_info(station_id="940GZZLUACT"):
         # Cleaned station name
         station_name = data.get("commonName", "").replace("Underground Station", "").strip()
 
-        # Extract platforms
-        num_platforms = sum(
-            1
-            for child in data.get("children", [])
-            if child.get("stopType") == "NaptanMetroPlatform"
-        )
+        # --- Platform counting (combo) ---
+        platform_ids = set()
 
+        # Children
+        for child in data.get("children", []):
+            if child.get("stopType") == "NaptanMetroPlatform":
+                naptan = child.get("naptanId") or child.get("id")
+                if naptan:
+                    platform_ids.add(naptan)
+
+        # lineGroup
+        for group in data.get("lineGroup", []):
+            refs = group.get("naptanIdReference", [])
+            if isinstance(refs, list):
+                platform_ids.update(refs)
+            elif isinstance(refs, str):
+                platform_ids.add(refs)
+
+        # --- Platform names from arrivals ---
+        arrivals_url = f"https://api.tfl.gov.uk/StopPoint/{station_id}/Arrivals"
+        try:
+            arr_resp = requests.get(arrivals_url, timeout=15)
+            arr_resp.raise_for_status()
+            arrivals = arr_resp.json()
+            arrival_platforms = {a.get("platformName") for a in arrivals if a.get("platformName")}
+        except Exception:
+            arrival_platforms = set()
+
+        # Combine both: if metadata is weak, arrivals helps
+        num_platforms = max(len(platform_ids), len(arrival_platforms))
 
         # Extract lines
         lines = [line["name"] for line in data.get("lines", [])]
-
+        
         # Zone information
-        zones = []
-        # Option 1: TfL often has "zones" list directly
-        if "zones" in data:
-            zones = data["zones"]
+        zone = None
+        if "zones" in data and data["zones"]:
+            # take the first zone
+            zone = int(data["zones"][0])
         else:
-            # Option 2: check additionalProperties
             for prop in data.get("additionalProperties", []):
                 if prop.get("key") == "Zone":
-                    zones = [int(z.strip()) for z in prop.get("value", "").split(",")]
+                    # sometimes TfL gives comma-separated values (e.g., "2,3")
+                    zone = int(prop.get("value").split(",")[0].strip())
                     break
+
 
         return {
             "station_name": station_name,
             "number_of_platforms": num_platforms,
             "lines": lines,
-            "zones": zones
+            "zones": zone
         }
 
     except Exception as e:
         return {"error": str(e)}
 
-print(get_station_info())
+print(get_station_info("940GZZLUAGL"))
