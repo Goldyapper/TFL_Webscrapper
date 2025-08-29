@@ -146,12 +146,8 @@ def get_station_info(station_id):
         else:
             zone = get_zone_from_wikipedia(station_name)
 
-        return {
-            "station_name": station_name,
-            "number_of_platforms": num_platforms,
-            "lines": lines,
-            "zones": zone
-        }
+        return station_name,num_platforms,[lines],zone
+        
 
     except Exception as e:
         return {"error": str(e)}

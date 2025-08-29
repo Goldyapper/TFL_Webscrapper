@@ -37,14 +37,14 @@ def station_info_loop(station_ids):
                 print("="*10)
                 continue  # skip to retry the id
             
-            seen_stations[info["station_name"]] = info
+            seen_stations[info[0]] = info
         
         for info in seen_stations.values():
             print("="*10)
-            print(f"Station: {info['station_name']}")
-            print(f"Zone: {info['zones']}")
-            print(f"Number of platforms: {info['number_of_platforms']}")
-            print(f"Lines: {', '.join(info['lines'])}")
+            print(f"Station: {info[0]}")
+            print(f"Zone: {info[1]}")
+            print(f"Number of platforms: {info[2]}")
+            print(f"Lines: {', '.join(info[3])}")
             print("="*10)
 
         i += 1
