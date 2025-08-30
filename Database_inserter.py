@@ -4,9 +4,10 @@ from Staton_info_scrapper import get_station_info
 def database_adder(station_info):
     
     station_name = station_info[0] if station_info[0] else None
-    zone = station_info[1] if station_info[1] else None
-    platforms = station_info[2] if station_info[2] else None
-    lines = ', '.join(station_info[3]) if station_info[3] else None
+    platforms = station_info[1] if station_info[1] else None
+    lines = ', '.join(station_info[2]) if station_info[2] else None
+    zone = station_info[3] if station_info[3] else None
+
     
     # Connect to SQLite DB
     conn = sqlite3.connect('tube.db')
@@ -17,10 +18,9 @@ def database_adder(station_info):
     CREATE TABLE IF NOT EXISTS stations (
         id INTEGER PRIMARY KEY,
         station_name TEXT NOT NULL,
-        zone INTEGER,
-        platforms INEGER,
-        lines TEXT
-
+        platforms INTEGER,
+        lines TEXT,
+        zone INTEGER
     )
     ''')
 
@@ -31,10 +31,11 @@ def database_adder(station_info):
 
 
     cursor.execute('''
-    INSERT INTO Stations (id, station_name, zone, platforms, lines)
-    VALUES (?, ?, ?, ?)
-    ''', (id, station_name, zone, platforms, zone, lines))
-    print((id, station_name, zone, platforms, zone, lines))
+    INSERT INTO Stations (id, station_name, platforms, lines, zone)
+    VALUES (?, ?, ?, ?, ?)
+    ''', (id, station_name, platforms, lines, zone))
+
+    print((id, station_name, platforms, lines, zone))
 
 
     # Save and close
@@ -43,3 +44,4 @@ def database_adder(station_info):
     conn.close()
 
 database_adder(get_station_info("940GZZLUHCL"))
+database_adder(get_station_info("910GBONDST"))

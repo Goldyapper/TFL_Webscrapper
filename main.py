@@ -42,9 +42,9 @@ def station_info_loop(station_ids):
         for info in seen_stations.values():
             print("="*10)
             print(f"Station: {info[0]}")
-            print(f"Zone: {info[1]}")
-            print(f"Number of platforms: {info[2]}")
-            print(f"Lines: {', '.join(info[3])}")
+            print(f"Number of platforms: {info[1]}")
+            print(f"Lines: {', '.join(info[2])}")
+            print(f"Zone: {info[3]}")
             print("="*10)
 
         i += 1

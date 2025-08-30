@@ -99,7 +99,7 @@ def get_zone_from_wikipedia(station_name):
                 zone_text = data.get_text(strip=True)
                 # Remove parentheses and extra text
                 zone_text = re.sub(r"\s*\(.*?\)", "", zone_text)
-    return None
+    return zone_text
 
 
 def get_station_info(station_id):
@@ -146,11 +146,11 @@ def get_station_info(station_id):
         else:
             zone = get_zone_from_wikipedia(station_name)
 
-        return station_name,num_platforms,[lines],zone
+        return station_name,num_platforms,lines,zone
         
 
     except Exception as e:
         return {"error": str(e)}
 
 #print(get_station_info("940GZZLUHCL"))
-#print(get_station_info(['910GBONDST', '940GZZLUBND']))
+#print(get_station_info("910GBONDST"))
