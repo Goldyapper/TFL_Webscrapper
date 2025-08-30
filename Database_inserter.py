@@ -35,13 +35,7 @@ def database_adder(station_info):
     VALUES (?, ?, ?, ?, ?)
     ''', (id, station_name, platforms, lines, zone))
 
-    print((id, station_name, platforms, lines, zone))
-
-
     # Save and close
     conn.commit()
-    print("success")
+    print(f"Successfully added {station_name} to DB")
     conn.close()
-
-database_adder(get_station_info("940GZZLUHCL"))
-database_adder(get_station_info("910GBONDST"))

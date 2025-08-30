@@ -12,6 +12,12 @@ VALID_LINES = {
     "jubilee", "metropolitan", "northern", "piccadilly", "victoria",
     "waterloo & city", "dlr", "london overground", "elizabeth line"
 }
+def clean_line_name(name):
+    name = name.strip()
+    if name.lower() == "elizabeth line":
+        return "Elizabeth"
+    return name
+
 
 def find_zone(data):
     # Search recursively
@@ -133,7 +139,8 @@ def get_station_info(station_id):
         # Extract lines
         # Lines (filter only valid TfL rail lines)
         lines = sorted({
-            line["name"] for line in data.get("lines", [])
+            clean_line_name(line["name"])
+            for line in data.get("lines", [])
             if line.get("name") and line["name"].lower() in VALID_LINES
         })
 
@@ -151,6 +158,3 @@ def get_station_info(station_id):
 
     except Exception as e:
         return {"error": str(e)}
-
-#print(get_station_info("940GZZLUHCL"))
-#print(get_station_info("910GBONDST"))
