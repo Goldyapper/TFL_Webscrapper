@@ -18,30 +18,43 @@ def clean_line_name(name):
         return "Elizabeth"
     return name
 
-
 def find_zone(data):
-    # Search recursively
     if isinstance(data, dict):
-        # Direct 'zone' key
         if 'zone' in data:
-            return data['zone']
-        # Check additionalProperties
+            return clean_zone(data['zone'])
         if 'additionalProperties' in data:
             for prop in data['additionalProperties']:
                 if prop.get('key', '').lower() == 'zone' and prop.get('value'):
-                    # Handle multi-zone like "2+3"
-                    return prop['value'].split('+')[0].strip()
-        # Recurse through all dict values
+                    return clean_zone(prop['value'])
         for value in data.values():
             result = find_zone(value)
             if result is not None:
                 return result
+
     elif isinstance(data, list):
         for item in data:
             result = find_zone(item)
             if result is not None:
                 return result
+
     return None
+
+def clean_zone(zone_str):
+    """Normalize TfL zone strings into the lowest number (int)."""
+    if not zone_str:
+        return None
+
+    # Replace 'and', '/', etc. with '+'
+    zone_str = re.sub(r'\s*(and|/)\s*', '+', zone_str.lower())
+
+    # Extract digits
+    parts = re.findall(r"\d+", zone_str)
+    if not parts:
+        return None
+
+    # Return the lowest zone as int
+    return int(min(parts, key=int))
+
 
 def get_wikipedia_page(station_name):
     """
@@ -158,3 +171,5 @@ def get_station_info(station_id):
 
     except Exception as e:
         return {"error": str(e)}
+
+print(get_station_info("940GZZLUBBB"))
