@@ -152,7 +152,6 @@ station_ids = {
     "Leytonstone": ['940GZZLULYS'],
     "Liverpool Street": ['910GLIVSTLL', '940GZZLULVT'],    
     "London Bridge": ['940GZZLULNB'],
-    "London Liverpool Street": ['910GLIVST'],
     "Loughton": ['940GZZLULGN'],
     "Maidenhead": ['910GMDNHEAD'],
     "Manor House": ['940GZZLUMRH'],
@@ -294,7 +293,7 @@ station_ids = {
     "Wood Lane": ['940GZZLUWLA'],
     "Woodford": ['940GZZLUWOF'],
     "Woodside Park": ['940GZZLUWOP'],
-    "Woolwich": ['910GWOLWXR'],
+    "Woolwich": ['910GWOLWXR']
 }
 
 # tube colours

@@ -1,6 +1,8 @@
 import requests,wikipediaapi,re
 from bs4 import BeautifulSoup
 
+API_KEY =  "f541056479e94b49bd2f18167e45ea6b"
+
 # Specify a wiki user
 wiki_wiki = wikipediaapi.Wikipedia(
     language='en',
@@ -12,6 +14,26 @@ VALID_LINES = {
     "jubilee", "metropolitan", "northern", "piccadilly", "victoria",
     "waterloo & city", "dlr", "london overground", "elizabeth line"
 }
+
+HARDCODED_PLATFORMS = {
+    "Edgware Road": 6,
+    "Hammersmith": 7, 
+    "Heathrow Airport Terminal 4": 3,
+    "Heathrow Airport Terminal 5": 6,
+    "Kensington": 3, 
+    "King's Cross & St Pancras International": 8,
+    "Paddington": 8,
+    "Liverpool Street": 10,
+    "Reading": 4,
+    "Stratford" : 10,
+    "London Bridge": 4,
+    "Maidenhead": 2,
+    "Slough": 2,
+    "Twyford": 2,
+    "Finsbury Park": 4,
+    "Moorgate": 8
+}
+
 def clean_line_name(name):
     name = name.strip()
     if name.lower() == "elizabeth line":
@@ -79,35 +101,28 @@ def get_wikipedia_page(station_name):
             return BeautifulSoup(resp.text, "html.parser")
     return None
 
+def normalize_station_name(name: str) -> str:
+    """
+    Clean station names so they match hardcoded overrides.
+    """
+    # Remove things in parentheses
+    name = re.sub(r"\s*\(.*?\)", "", name)
+    # Standardize common Heathrow variations
+    name = name.replace("Heathrow Terminal", "Heathrow Airport Terminal")
+    return name.strip()
+
 def get_platform_from_wikipedia(station_name):
-    """
-    Extract number of platforms from a Wikipedia page.
-    """
+    clean_name = normalize_station_name(station_name)
+
+    if clean_name in HARDCODED_PLATFORMS:
+        return HARDCODED_PLATFORMS[clean_name]
+
     soup = get_wikipedia_page(station_name)
     if not soup:
         return None
 
     rows = soup.select(".infobox tr")
-    for row in rows:
-        header = row.find("th")
-        data = row.find("td")
-        if header and data:
-            if "number of platforms" in header.get_text(strip=True).lower():
-                match = re.search(r'\d+', data.get_text(strip=True))
-                if match:
-                    return int(match.group(0))
-    return None
-
-def get_zone_from_wikipedia(station_name):
-    """
-    Extract fare zone(s) from a Wikipedia page.
-    """
-    soup = get_wikipedia_page(station_name)
-    if not soup:
-        return None
-
-    rows = soup.select(".infobox tr")
-    possible_headers = ["fare zone", "zone", "travelcard zone", "london fare zone"]
+    possible_headers = ["number of platforms", "platforms"]  # expanded list
 
     for row in rows:
         header = row.find("th")
@@ -115,11 +130,11 @@ def get_zone_from_wikipedia(station_name):
         if header and data:
             header_text = header.get_text(strip=True).lower()
             if any(h in header_text for h in possible_headers):
-                zone_text = data.get_text(strip=True)
-                # Remove parentheses and extra text
-                zone_text = re.sub(r"\s*\(.*?\)", "", zone_text)
-    return zone_text
+                match = re.search(r'\d+', data.get_text(strip=True))
+                if match:
+                    return int(match.group(0))
 
+    return None
 
 def get_station_info(station_id):
     """
@@ -130,7 +145,8 @@ def get_station_info(station_id):
     """
     try:
         url = f"https://api.tfl.gov.uk/StopPoint/{station_id}"
-        response = requests.get(url)
+        params = {"app_key": API_KEY}
+        response = requests.get(url, params=params)
         response.raise_for_status()
         data = response.json()
 
@@ -143,7 +159,7 @@ def get_station_info(station_id):
         
 
         wiki_station_name = station_name.replace(" ", "_")
-        wiki_platforms = get_platform_from_wikipedia(wiki_station_name)
+        wiki_platforms = get_platform_from_wikipedia(station_name)
         
         num_platforms = 0
         if wiki_platforms:
@@ -162,14 +178,17 @@ def get_station_info(station_id):
             try:
                 zone = int(str(zone).split("+")[0].strip())
             except Exception:
-                zone = get_zone_from_wikipedia(station_name)
+                zone = clean_zone(find_zone(station_name))
         else:
-            zone = get_zone_from_wikipedia(station_name)
+            zone = clean_zone(find_zone(station_name))
 
+        # Fallback for NR stations outside London
+        if zone is None:
+            zone = 6
         return station_name,num_platforms,lines,zone
         
 
     except Exception as e:
         return {"error": str(e)}
 
-print(get_station_info("940GZZLUBBB"))
+#print(get_station_info("940GZZLUBBB"))

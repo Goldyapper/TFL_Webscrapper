@@ -2,6 +2,8 @@ from Staton_info_scrapper import get_station_info
 from Database_inserter import database_adder
 import time
 
+import time
+
 def fetch_with_retry(stop_id, station):
     wait = 1
     retries = 5
@@ -13,10 +15,12 @@ def fetch_with_retry(stop_id, station):
                 print(f"Rate limit hit for {station}, retry {attempt+1} in {wait}s...")
                 time.sleep(wait)
                 wait *= 2  # exponential wait
+                continue  # try again
             else:
-                return info
-        return info
-    
+                return info # return if its a different error
+        else:
+            return info  # success
+
     return {"error": f"Failed after {retries} retries for {stop_id}"}
 
 
